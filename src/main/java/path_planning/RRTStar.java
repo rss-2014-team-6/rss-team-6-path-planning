@@ -4,6 +4,7 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -50,6 +51,8 @@ public class RRTStar {
     }
 
     private Map<Point2D.Double, List<Point2D.Double>> graph = new HashMap<Point2D.Double, List<Point2D.Double>>();
+    private Map<Point2D.Double, Point2D.Double> parent = new HashMap<Point2D.Double, Point2D.Double>();
+    private Map<Point2D.Double, Double> cost = new HashMap<Point2D.Double, Double>();
 
     public RRTStar(Point2D.Double start, Point2D.Double goal,
             Rectangle2D.Double cworldRect, CSpace cspace, int maxPoints) {
@@ -64,6 +67,8 @@ public class RRTStar {
 
         // initialize the RRT graph
         graph.put(start, new ArrayList<Point2D.Double>());
+        parent.put(start, start);
+        cost.put(start, (double) 0);
 
         // Create the RRT graph
         // we keep iterating until the goal point is reached or until we've
@@ -76,13 +81,39 @@ public class RRTStar {
                 end = goal;
             else
                 end = getRandomPoint(cworldRect);
-            beginning = getClosestPoint(end, start);
+            beginning = getClosestPoint(end);
             if (end != goal)
                 end = getExtension(beginning, end);
             if (canSee(beginning, end, cspace, cworldRect)) {
-                graph.get(beginning).add(end);
-                graph.put(end, new ArrayList<Point2D.Double>());
-                graph.get(end).add(beginning);
+                // TODO: Generate the correct constant for this
+                List<Point2D.Double> nearPoints = getNearPoints(end, 2);
+                // Find minimum cost path to end from near points.
+                double minCost = cost.get(beginning) + euclideanDistance(beginning, end);
+                Point2D.Double nearest = beginning;
+                for (Point2D.Double nearpt : nearPoints) {
+                    if (canSee(nearpt, end, cspace, cworldRect) &&
+                        cost.get(nearpt) + euclideanDistance(nearpt, end) < minCost) {
+                        minCost = cost.get(nearpt) + euclideanDistance(nearpt, end);
+                        nearest = nearpt;
+                    }
+                }
+                graph.put(end, Arrays.asList(nearest));
+                parent.put(end, nearest);
+                cost.put(end, minCost);
+                graph.get(nearest).add(end);
+
+                // Rewire the tree to use min-cost paths that go through the new point
+                for (Point2D.Double nearpt : nearPoints) {
+                    if (canSee(nearpt, end, cspace, cworldRect) &&
+                        cost.get(end) + euclideanDistance(nearpt, end) < cost.get(nearpt)) {
+                        // Replace the edge from the parent of nearpt to nearpt
+                        graph.get(parent.get(nearpt)).remove(nearpt);
+                        graph.get(end).add(nearpt);
+                        parent.put(nearpt, end);
+                        cost.put(nearpt, cost.get(end) + euclideanDistance(nearpt, end));
+                    }
+                }
+
                 count++;
                 if (end == goal)
                     found = true;
@@ -98,9 +129,8 @@ public class RRTStar {
         return new Point2D.Double(x, y);
     }
 
-    public Point2D.Double getClosestPoint(Point2D.Double pt,
-            Point2D.Double start) {
-        Point2D.Double minpt = start;
+    public Point2D.Double getClosestPoint(Point2D.Double pt) {
+        Point2D.Double minpt = null;
         double minDist = -1;
         for (Point2D.Double graphpt : graph.keySet()) {
             if (minDist == -1 || euclideanDistance(pt, graphpt) < minDist) {
@@ -109,6 +139,16 @@ public class RRTStar {
             }
         }
         return minpt;
+    }
+
+    public List<Point2D.Double> getNearPoints(Point2D.Double pt, double radius) {
+        List<Point2D.Double> nearPoints = new ArrayList<Point2D.Double>();
+        for (Point2D.Double graphpt: graph.keySet()) {
+            if (euclideanDistance(pt, graphpt) < radius) {
+                nearPoints.add(graphpt);
+            }
+        }
+        return nearPoints;
     }
 
     public Point2D.Double getExtension(Point2D.Double start, Point2D.Double end) {

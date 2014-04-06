@@ -1,5 +1,6 @@
 package path_planning;
 
+import org.ros.message.MessageListener;
 import org.ros.namespace.GraphName;
 import org.ros.node.AbstractNodeMain;
 import org.ros.node.ConnectedNode;
@@ -11,13 +12,13 @@ import rss_msgs.PositionTargetMsg;
 public class PlannerNode extends AbstractNodeMain {
 
     /* Publishers and subscribers */
-    private Publisher<PositionTargetMsg> positionPub;
-    private Subscriber<PositionMsg> targetPub;
+    private Publisher<PositionTargetMsg> targetPub;
+    private Subscriber<PositionMsg> positionSub;
 
     /* Our current pose state */
-    private float x;
-    private float y;
-    private float theta;
+    private double x;
+    private double y;
+    private double theta;
 
     private void handlePositionMsg(PositionMsg msg) {
         // Save our pose
@@ -38,7 +39,7 @@ public class PlannerNode extends AbstractNodeMain {
                 handlePositionMsg(msg);
             }
         });
-        targetPub = node.newSubscriber("/path/target", "rss_msgs/PositionTargetMsg");
+        targetPub = node.newPublisher("/path/target", "rss_msgs/PositionTargetMsg");
     }
 
     @Override
