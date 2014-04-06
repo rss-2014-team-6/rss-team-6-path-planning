@@ -1,18 +1,30 @@
 package path_planning;
 
+import java.awt.geom.Point2D;
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.List;
+
 import org.ros.message.MessageListener;
 import org.ros.namespace.GraphName;
 import org.ros.node.AbstractNodeMain;
 import org.ros.node.ConnectedNode;
+import org.ros.node.parameter.ParameterTree;
 import org.ros.node.topic.Publisher;
 import org.ros.node.topic.Subscriber;
 import rss_msgs.PositionMsg;
 import rss_msgs.PositionTargetMsg;
+import rss_msgs.WaypointMsg;
 
 public class PlannerNode extends AbstractNodeMain {
 
+    // TODO: Fill me in
+    private static final double ROBOT_RADIUS = 0.3;
+    private static final int RRT_MAX_POINTS = 300;
+
     /* Publishers and subscribers */
-    private Publisher<PositionTargetMsg> targetPub;
+    private Publisher<WaypointMsg> targetPub;
+    private Subscriber<PositionTargetMsg> goalSub;
     private Subscriber<PositionMsg> positionSub;
 
     /* Our current pose state */
@@ -20,18 +32,49 @@ public class PlannerNode extends AbstractNodeMain {
     private double y;
     private double theta;
 
+    /* Our current map state */
+    private PolygonMap map;
+
     private void handlePositionMsg(PositionMsg msg) {
         // Save our pose
         x = msg.getX();
         y = msg.getY();
         theta = msg.getTheta();
-        
-        // Update our path plan, and publish to targetPub
-        
     }
+
+    private void handleGoalMsg(PositionTargetMsg msg) {
+        // Update our path plan, and publish to targetPub
+        CSpace cSpace = new CSpace(map.getObstacles(), ROBOT_RADIUS);
+        Point2D.Double start = new Point2D.Double(x, y);
+        Point2D.Double goal = new Point2D.Double(msg.getX(), msg.getY());
+        RRTStar rrt_graph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
+        List<Point2D.Double> path = rrt_graph.computeShortestPath(start, goal);
+
+        // TODO: Draw full path to gui
+        // Maybe also computed tree? (might be slow)
+        Point2D.Double nextWaypoint = path.get(0);
+        WaypointMsg waypointMsg = targetPub.newMessage();
+        waypointMsg.setX(nextWaypoint.x);
+        waypointMsg.setY(nextWaypoint.y);
+        // TODO: Theta?
+        targetPub.publish(waypointMsg);
+    }        
 
     @Override
     public void onStart(ConnectedNode node) {
+        // TODO: Get the map estimate from Localization
+        ParameterTree paramTree = node.getParameterTree();
+        String mapFileName = paramTree.getString(node.resolveName("~/mapFileName"));
+        try {
+            map = new PolygonMap(mapFileName);
+        }
+        catch (IOException e) {
+            throw new RuntimeException("Map file IO error");
+        }
+        catch (ParseException e) {
+            throw new RuntimeException("Map file failed to parse");
+        }
+
         positionSub = node.newSubscriber("/loc/position", "rss_msgs/PositonMsg");
         positionSub.addMessageListener(new MessageListener<PositionMsg>() {
             @Override
@@ -39,7 +82,14 @@ public class PlannerNode extends AbstractNodeMain {
                 handlePositionMsg(msg);
             }
         });
-        targetPub = node.newPublisher("/path/target", "rss_msgs/PositionTargetMsg");
+        goalSub = node.newSubscriber("/command/Goal", "rss_msgs/PositionTargetMsg");
+        goalSub.addMessageListener(new MessageListener<PositionTargetMsg>() {
+            @Override
+            public void onNewMessage(PositionTargetMsg msg) {
+                handleGoalMsg(msg);
+            }
+        });
+        targetPub = node.newPublisher("/path/target", "rss_msgs/WaypointMsg");
     }
 
     @Override
