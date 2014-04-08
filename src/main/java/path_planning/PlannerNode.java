@@ -87,28 +87,28 @@ public class PlannerNode extends AbstractNodeMain {
     @Override
     public void onStart(ConnectedNode node) {
 
-        positionSub = node.newSubscriber("/loc/position", "rss_msgs/PositonMsg");
+        positionSub = node.newSubscriber("/loc/Position", "rss_msgs/PositonMsg");
         positionSub.addMessageListener(new MessageListener<PositionMsg>() {
             @Override
             public void onNewMessage(PositionMsg msg) {
                 handlePositionMsg(msg);
             }
         });
-        goalSub = node.newSubscriber("/command/Goal", "rss_msgs/PositionTargetMsg");
+        goalSub = node.newSubscriber("/state/PositionTarget", "rss_msgs/PositionTargetMsg");
         goalSub.addMessageListener(new MessageListener<PositionTargetMsg>() {
             @Override
             public void onNewMessage(PositionTargetMsg msg) {
                 handleGoalMsg(msg);
             }
         });
-        mapSub = node.newSubscriber("/loc/map", "rss_msgs/MapMsg");
+        mapSub = node.newSubscriber("/loc/Map", "rss_msgs/MapMsg");
         mapSub.addMessageListener(new MessageListener<MapMsg>() {
             @Override
             public void onNewMessage(MapMsg msg) {
                 handleMapMsg(msg);
             }
         });
-        targetPub = node.newPublisher("/path/target", "rss_msgs/WaypointMsg");
+        targetPub = node.newPublisher("/path/Waypoint", "rss_msgs/WaypointMsg");
     }
 
     @Override
