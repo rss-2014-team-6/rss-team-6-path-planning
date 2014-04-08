@@ -75,7 +75,11 @@ public class PlannerNode extends AbstractNodeMain {
             throw new RuntimeException("Map file failed to parse");
         }
 
-        positionSub = node.newSubscriber("/loc/position", "rss_msgs/PositonMsg");
+
+    @Override
+    public void onStart(ConnectedNode node) {
+
+        positionSub = node.newSubscriber("/loc/Position", "rss_msgs/PositionMsg");
         positionSub.addMessageListener(new MessageListener<PositionMsg>() {
             @Override
             public void onNewMessage(PositionMsg msg) {
