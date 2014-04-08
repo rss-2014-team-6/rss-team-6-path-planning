@@ -1,7 +1,9 @@
 package path_planning;
 
 import java.awt.geom.Point2D;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.text.ParseException;
 import java.util.List;
 
@@ -12,9 +14,12 @@ import org.ros.node.ConnectedNode;
 import org.ros.node.parameter.ParameterTree;
 import org.ros.node.topic.Publisher;
 import org.ros.node.topic.Subscriber;
+import rss_msgs.MapMsg;
 import rss_msgs.PositionMsg;
 import rss_msgs.PositionTargetMsg;
 import rss_msgs.WaypointMsg;
+import map.CSpace;
+import map.PolygonMap;
 
 public class PlannerNode extends AbstractNodeMain {
 
@@ -26,6 +31,7 @@ public class PlannerNode extends AbstractNodeMain {
     private Publisher<WaypointMsg> targetPub;
     private Subscriber<PositionTargetMsg> goalSub;
     private Subscriber<PositionMsg> positionSub;
+    private Subscriber<MapMsg> mapSub;
 
     /* Our current pose state */
     private double x;
@@ -60,21 +66,23 @@ public class PlannerNode extends AbstractNodeMain {
         targetPub.publish(waypointMsg);
     }        
 
-    @Override
-    public void onStart(ConnectedNode node) {
-        // TODO: Get the map estimate from Localization
-        ParameterTree paramTree = node.getParameterTree();
-        String mapFileName = paramTree.getString(node.resolveName("~/mapFileName"));
+    private void handleMapMsg(MapMsg msg) {
         try {
-            map = new PolygonMap(mapFileName);
+            ObjectInputStream stream = new ObjectInputStream(
+                new ByteArrayInputStream(msg.getSerializedMap().array()));
+            map = (PolygonMap) stream.readObject();
+            stream.close();
         }
         catch (IOException e) {
-            throw new RuntimeException("Map file IO error");
+            e.printStackTrace();
+            return;
         }
-        catch (ParseException e) {
-            throw new RuntimeException("Map file failed to parse");
+        catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            return;
         }
-
+    }
+        
 
     @Override
     public void onStart(ConnectedNode node) {
@@ -86,14 +94,21 @@ public class PlannerNode extends AbstractNodeMain {
                 handlePositionMsg(msg);
             }
         });
-        goalSub = node.newSubscriber("/command/Goal", "rss_msgs/PositionTargetMsg");
+        goalSub = node.newSubscriber("/state/PositionTarget", "rss_msgs/PositionTargetMsg");
         goalSub.addMessageListener(new MessageListener<PositionTargetMsg>() {
             @Override
             public void onNewMessage(PositionTargetMsg msg) {
                 handleGoalMsg(msg);
             }
         });
-        targetPub = node.newPublisher("/path/target", "rss_msgs/WaypointMsg");
+        mapSub = node.newSubscriber("/loc/Map", "rss_msgs/MapMsg");
+        mapSub.addMessageListener(new MessageListener<MapMsg>() {
+            @Override
+            public void onNewMessage(MapMsg msg) {
+                handleMapMsg(msg);
+            }
+        });
+        targetPub = node.newPublisher("/path/Waypoint", "rss_msgs/WaypointMsg");
     }
 
     @Override

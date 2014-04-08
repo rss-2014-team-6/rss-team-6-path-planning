@@ -13,6 +13,9 @@ import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 
+import map.CSpace;
+import map.PolygonObstacle;
+
 public class RRTStar {
 
     private final double EXTENSION_LENGTH = .5;
