@@ -41,6 +41,9 @@ public class PlannerNode extends AbstractNodeMain {
     /* Our current map state */
     private PolygonMap map;
 
+    /* keep track of whether we have a map yet */
+    boolean initialized;
+
     private void handlePositionMsg(PositionMsg msg) {
         // Save our pose
         x = msg.getX();
@@ -50,20 +53,22 @@ public class PlannerNode extends AbstractNodeMain {
 
     private void handleGoalMsg(PositionTargetMsg msg) {
         // Update our path plan, and publish to targetPub
-        CSpace cSpace = new CSpace(map.getObstacles(), ROBOT_RADIUS);
-        Point2D.Double start = new Point2D.Double(x, y);
-        Point2D.Double goal = new Point2D.Double(msg.getX(), msg.getY());
-        RRTStar rrt_graph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
-        List<Point2D.Double> path = rrt_graph.computeShortestPath(start, goal);
-
-        // TODO: Draw full path to gui
-        // Maybe also computed tree? (might be slow)
-        Point2D.Double nextWaypoint = path.get(0);
-        WaypointMsg waypointMsg = targetPub.newMessage();
-        waypointMsg.setX(nextWaypoint.x);
-        waypointMsg.setY(nextWaypoint.y);
-        // TODO: Theta?
-        targetPub.publish(waypointMsg);
+	if(initialized){
+	    CSpace cSpace = new CSpace(map.getObstacles(), ROBOT_RADIUS);
+	    Point2D.Double start = new Point2D.Double(x, y);
+	    Point2D.Double goal = new Point2D.Double(msg.getX(), msg.getY());
+	    RRTStar rrt_graph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
+	    List<Point2D.Double> path = rrt_graph.computeShortestPath(start, goal);
+	    
+	    // TODO: Draw full path to gui
+	    // Maybe also computed tree? (might be slow)
+	    Point2D.Double nextWaypoint = path.get(0);
+	    WaypointMsg waypointMsg = targetPub.newMessage();
+	    waypointMsg.setX(nextWaypoint.x);
+	    waypointMsg.setY(nextWaypoint.y);
+	    // TODO: Theta?
+	    targetPub.publish(waypointMsg);
+	}
     }        
 
     private void handleMapMsg(MapMsg msg) {
@@ -72,6 +77,7 @@ public class PlannerNode extends AbstractNodeMain {
                 new ByteArrayInputStream(msg.getSerializedMap().array()));
             map = (PolygonMap) stream.readObject();
             stream.close();
+	    initialized = true;
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -109,6 +115,8 @@ public class PlannerNode extends AbstractNodeMain {
             }
         });
         targetPub = node.newPublisher("/path/Waypoint", "rss_msgs/WaypointMsg");
+
+	initialized = false;
     }
 
     @Override
