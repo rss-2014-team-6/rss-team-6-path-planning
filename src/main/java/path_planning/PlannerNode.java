@@ -1,6 +1,8 @@
 package path_planning;
 
+import java.awt.Color;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -18,8 +20,15 @@ import rss_msgs.MapMsg;
 import rss_msgs.PositionMsg;
 import rss_msgs.PositionTargetMsg;
 import rss_msgs.WaypointMsg;
+import gui_msgs.GUIRectMsg;
+import gui_msgs.GUIPolyMsg;
+import gui_msgs.GUISegmentMsg;
+import gui_msgs.GUIPointMsg;
+import gui_msgs.ColorMsg;
+import gui.SonarGUI;
 import map.CSpace;
 import map.PolygonMap;
+import map.PolygonObstacle;
 
 public class PlannerNode extends AbstractNodeMain {
 
@@ -29,6 +38,10 @@ public class PlannerNode extends AbstractNodeMain {
 
     /* Publishers and subscribers */
     private Publisher<WaypointMsg> targetPub;
+    private Publisher<GUIRectMsg> guiRectMsgPub;
+    private Publisher<GUIPolyMsg> guiPolyMsgPub;
+    private Publisher<GUISegmentMsg> guiSegmentMsgPub;
+    private Publisher<GUIPointMsg> guiPointMsgPub;
     private Subscriber<PositionTargetMsg> goalSub;
     private Subscriber<PositionMsg> positionSub;
     private Subscriber<MapMsg> mapSub;
@@ -40,6 +53,9 @@ public class PlannerNode extends AbstractNodeMain {
 
     /* Our current map state */
     private PolygonMap map;
+
+    /* Our current waypoints */
+    private List<Point2D.Double> waypoints;
 
     /* keep track of whether we have a map yet */
     boolean initialized;
@@ -58,18 +74,18 @@ public class PlannerNode extends AbstractNodeMain {
 	    Point2D.Double start = new Point2D.Double(x, y);
 	    Point2D.Double goal = new Point2D.Double(msg.getX(), msg.getY());
 	    RRTStar rrt_graph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
-	    List<Point2D.Double> path = rrt_graph.computeShortestPath(start, goal);
+	    waypoints = rrt_graph.computeShortestPath(start, goal);
 	    
 	    // TODO: Draw full path to gui
 	    // Maybe also computed tree? (might be slow)
-	    Point2D.Double nextWaypoint = path.get(0);
+	    Point2D.Double nextWaypoint = waypoints.get(0);
 	    WaypointMsg waypointMsg = targetPub.newMessage();
 	    waypointMsg.setX(nextWaypoint.x);
 	    waypointMsg.setY(nextWaypoint.y);
 	    // TODO: Theta?
 	    targetPub.publish(waypointMsg);
 	}
-    }        
+    }
 
     private void handleMapMsg(MapMsg msg) {
         try {
@@ -120,9 +136,127 @@ public class PlannerNode extends AbstractNodeMain {
             }
         });
         targetPub = node.newPublisher("/path/Waypoint", "rss_msgs/WaypointMsg");
+        guiRectMsgPub = node.newPublisher("/gui/Rect", "gui_msgs/GUIRectMsg");
+        guiPolyMsgPub = node.newPublisher("/gui/Poly", "gui_msgs/GUIPolyMsg");
+        guiSegmentMsgPub = node.newPublisher("/gui/Segment", "gui_msgs/GUISegmentMsg");
+        guiPointMsgPub = node.newPublisher("/gui/Point", "gui_msgs/GUIPointMsg");
 
 	initialized = false;
     }
+
+    private class DrawThread extends Thread {
+        @Override
+        public void run() {
+            while (true) {
+                displayMap();
+                displayWaypoints();
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public static void fillRectMsg(GUIRectMsg rectMsg,
+            Rectangle2D.Double rect, Color c, boolean filled) {
+        rectMsg.getC().setR(c.getRed());
+        rectMsg.getC().setG(c.getGreen());
+        rectMsg.getC().setB(c.getBlue());
+        rectMsg.setX((float) rect.getX());
+        rectMsg.setY((float) rect.getY());
+        rectMsg.setWidth((float) rect.getWidth());
+        rectMsg.setHeight((float) rect.getHeight());
+        rectMsg.setFilled(filled ? 1 : 0);
+    }
+    
+    public static void fillPolyMsg(GUIPolyMsg polyMsg, PolygonObstacle obs,
+            Color c, boolean filled, boolean closed) {
+        polyMsg.getC().setR(c.getRed());
+        polyMsg.getC().setG(c.getGreen());
+        polyMsg.getC().setB(c.getBlue());
+        List<Point2D.Double> points = obs.getVertices();
+        float[] x = new float[points.size()];
+        float[] y = new float[points.size()];
+        for (int i = 0; i < points.size(); i++) {
+            x[i] = (float) points.get(i).x;
+            y[i] = (float) points.get(i).y;
+        }
+        polyMsg.setX(x);
+        polyMsg.setY(y);
+        polyMsg.setClosed(closed ? 1 : 0);
+        polyMsg.setFilled(filled ? 1 : 0);
+        polyMsg.setNumVertices(points.size());
+    }
+    
+    public static void fillPointMsg(GUIPointMsg pointMsg,
+            Point2D.Double point, Color color, long shape) {
+        pointMsg.setX(point.x);
+        pointMsg.setY(point.y);
+        pointMsg.setShape(shape);
+        pointMsg.getColor().setR(color.getRed());
+        pointMsg.getColor().setG(color.getGreen());
+        pointMsg.getColor().setB(color.getBlue());
+    }
+    
+    public static void fillSegmentMsg(GUISegmentMsg segMsg,
+            Point2D.Double start, Point2D.Double end, Color color) {
+        segMsg.setStartX(start.x);
+        segMsg.setStartY(start.y);
+        segMsg.setEndX(end.x);
+        segMsg.setEndY(end.y);
+        segMsg.getColor().setR(color.getRed());
+        segMsg.getColor().setG(color.getGreen());
+        segMsg.getColor().setB(color.getBlue());
+    }
+
+    /**
+     * Display the map inputed in the onStart method to MapGUI.
+     */
+    protected void displayMap() {
+        // Draw the world rectangle
+        GUIRectMsg rectMsg = guiRectMsgPub.newMessage();
+        fillRectMsg(rectMsg, map.getWorldRect(), Color.GRAY, false);
+        guiRectMsgPub.publish(rectMsg);
+        
+        // Draw obstacle polygons
+        List<PolygonObstacle> obstacles = map.getObstacles();
+        for (PolygonObstacle obs : obstacles) {
+            GUIPolyMsg polyMsg = guiPolyMsgPub.newMessage();
+            fillPolyMsg(polyMsg, obs, Color.BLUE, true, obs.isClosed());
+            guiPolyMsgPub.publish(polyMsg);
+        }
+        
+        // Draw robot start and end
+        Point2D.Double robotStart = map.getRobotStart();
+        Point2D.Double robotGoal = map.getRobotGoal();
+        
+        GUIPointMsg start = guiPointMsgPub.newMessage();
+        fillPointMsg(start, robotStart, Color.RED, SonarGUI.O_POINT);
+        guiPointMsgPub.publish(start);
+        
+        GUIPointMsg goal = guiPointMsgPub.newMessage();
+        fillPointMsg(goal, robotGoal, Color.GREEN, SonarGUI.X_POINT);
+        guiPointMsgPub.publish(goal);
+    }
+
+    /**
+     * Draw a path of the current waypoints to the MapGUI.
+     */
+    protected void displayWaypoints() {
+        if (waypoints.size() < 2) return;
+	Object[] pointsArray = waypoints.toArray();
+        
+        for (int i = 1; i < waypoints.size(); i++) {
+            Point2D.Double start = (Point2D.Double) pointsArray[i-1];
+            Point2D.Double end = (Point2D.Double) pointsArray[i];
+            GUISegmentMsg segMsg = guiSegmentMsgPub.newMessage();
+            fillSegmentMsg(segMsg, start, end, Color.RED);
+            guiSegmentMsgPub.publish(segMsg);
+        }
+    }
+
 
     @Override
     public GraphName getDefaultNodeName() {
