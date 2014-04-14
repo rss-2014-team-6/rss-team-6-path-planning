@@ -73,11 +73,16 @@ public class PlannerNode extends AbstractNodeMain {
 
     private void handleMapMsg(MapMsg msg) {
         try {
-            ObjectInputStream stream = new ObjectInputStream(
-                new ByteArrayInputStream(msg.getSerializedMap().array()));
+            byte[] ba = msg.getSerializedMap().array();
+            ByteArrayInputStream byteStream = new ByteArrayInputStream(ba);
+            // Skip the 4-byte length header
+            byteStream.skip(4);
+            
+            ObjectInputStream stream = new ObjectInputStream(byteStream);
+
             map = (PolygonMap) stream.readObject();
             stream.close();
-	    initialized = true;
+            initialized = true;
         }
         catch (IOException e) {
             e.printStackTrace();
