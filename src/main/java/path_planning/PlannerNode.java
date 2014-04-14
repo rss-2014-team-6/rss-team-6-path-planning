@@ -142,14 +142,22 @@ public class PlannerNode extends AbstractNodeMain {
         guiPointMsgPub = node.newPublisher("/gui/Point", "gui_msgs/GUIPointMsg");
 
 	initialized = false;
+
+	new DrawThread().start();
     }
 
     private class DrawThread extends Thread {
         @Override
         public void run() {
             while (true) {
-                displayMap();
-                displayWaypoints();
+		if (map != null) {
+		    System.out.println("Drawing map");
+		    displayMap();
+		    displayWaypoints();
+		}
+		else {
+		    System.out.println("Map is still null");
+		}
                 try {
                     Thread.sleep(2000);
                 } catch (InterruptedException e) {
@@ -245,7 +253,7 @@ public class PlannerNode extends AbstractNodeMain {
      * Draw a path of the current waypoints to the MapGUI.
      */
     protected void displayWaypoints() {
-        if (waypoints.size() < 2) return;
+        if (waypoints == null || waypoints.size() < 2) return;
 	Object[] pointsArray = waypoints.toArray();
         
         for (int i = 1; i < waypoints.size(); i++) {
