@@ -86,16 +86,25 @@ public class PlannerNode extends AbstractNodeMain {
 		rrtGraph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
 	    }
 	    System.out.println("RRT graph: " + rrtGraph.graph);
+	    System.out.println("Map rect: " + map.getWorldRect());
 	    waypoints = rrtGraph.computeShortestPath(start, goal);
 	    
 	    // TODO: Draw full path to gui
 	    // Maybe also computed tree? (might be slow)
-	    Point2D.Double nextWaypoint = waypoints.get(0);
-	    WaypointMsg waypointMsg = targetPub.newMessage();
-	    waypointMsg.setX(nextWaypoint.x);
-	    waypointMsg.setY(nextWaypoint.y);
-	    // TODO: Theta?
-	    targetPub.publish(waypointMsg);
+	    if(waypoints == null){
+		System.out.println("No waypoints :(");
+		// going forward we're going to need a way to indicate this to state machine
+		// it is possible that some areas of the map cannot be traversed to because we're too fat or something
+	    }
+	    else{
+		System.out.println("Got waypoints!! :)");
+		Point2D.Double nextWaypoint = waypoints.get(0);
+		WaypointMsg waypointMsg = targetPub.newMessage();
+		waypointMsg.setX(nextWaypoint.x);
+		waypointMsg.setY(nextWaypoint.y);
+		waypointMsg.setTheta(-1); //temporarily
+		targetPub.publish(waypointMsg);
+	    }
 	}
     }
 
