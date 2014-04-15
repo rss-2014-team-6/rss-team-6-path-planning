@@ -88,9 +88,12 @@ public class RRTStar {
             beginning = getClosestPoint(end);
             if (end != goal)
                 end = getExtension(beginning, end);
-            if (canSee(beginning, end, cspace, cworldRect)) {
+            System.out.println("End point: " + end);
+	    if (canSee(beginning, end, cspace, cworldRect)) {
+		System.out.println("We can see the end point!");
                 // TODO: Generate the correct constant for this
                 List<Point2D.Double> nearPoints = getNearPoints(end, 2);
+		System.out.println("Near points: " + nearPoints);
                 // Find minimum cost path to end from near points.
                 double minCost = cost.get(beginning) + euclideanDistance(beginning, end);
                 Point2D.Double nearest = beginning;
@@ -107,6 +110,7 @@ public class RRTStar {
                 parent.put(end, nearest);
                 cost.put(end, minCost);
                 graph.get(nearest).add(end);
+		
 
                 // Rewire the tree to use min-cost paths that go through the new point
                 for (Point2D.Double nearpt : nearPoints) {
