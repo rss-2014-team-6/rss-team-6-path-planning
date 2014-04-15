@@ -84,15 +84,16 @@ public class PlannerNode extends AbstractNodeMain {
 	    rrtComputer.setStart(start);
 	    rrtComputer.setGoal(goal);
 	    rrtComputer.setCworldRect(map.getWorldRect());
-	    System.out.println("Before computation");
+	    //System.out.println("Before computation");
 	    //synchronized(this) {
 	    ///System.out.println("In synch");
 		//rrtGraph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
 	    //}
-	    System.out.println("RRT graph: " + rrtComputer.compute());
-	    System.out.println("Map rect: " + map.getWorldRect());
+	    //System.out.println("RRT graph: " + rrtComputer.compute());
+	    //System.out.println("Map rect: " + map.getWorldRect());
 	    waypoints = rrtComputer.computeShortestPath(start, goal);
 	    
+	    System.out.println(waypoints);
 	    // TODO: Draw full path to gui
 	    // Maybe also computed tree? (might be slow)
 	    if(waypoints == null){

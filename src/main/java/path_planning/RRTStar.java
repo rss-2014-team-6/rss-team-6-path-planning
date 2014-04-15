@@ -122,12 +122,12 @@ public class RRTStar {
             beginning = getClosestPoint(end);
             if (end != goal)
                 end = getExtension(beginning, end);
-            System.out.println("End point: " + end);
+            //System.out.println("End point: " + end);
 	    if (canSee(beginning, end, cspace, cworldRect)) {
-		System.out.println("We can see the end point!");
+		//System.out.println("We can see the end point!");
                 // TODO: Generate the correct constant for this
                 List<Point2D.Double> nearPoints = getNearPoints(end, 2);
-		System.out.println("Near points: " + nearPoints);
+		//System.out.println("Near points: " + nearPoints);
                 // Find minimum cost path to end from near points.
                 double minCost = cost.get(beginning) + euclideanDistance(beginning, end);
                 Point2D.Double nearest = beginning;
