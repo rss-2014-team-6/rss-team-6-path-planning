@@ -20,6 +20,12 @@ public class RRTStar {
 
     private final double EXTENSION_LENGTH = .5;
     private Random rand = new Random();
+    private Point2D.Double start;
+    private Point2D.Double goal;
+    private Rectangle2D.Double cworldRect;
+    private CSpace cspace;
+    private int maxPoints;
+    
 
     // This is the class used for the A* search for the shortest path
     // Each queue element is a path that has the distance traveled and the
@@ -59,6 +65,34 @@ public class RRTStar {
 
     public RRTStar(Point2D.Double start, Point2D.Double goal,
             Rectangle2D.Double cworldRect, CSpace cspace, int maxPoints) {
+	this.start = start;
+	this.goal = goal;
+	this.cworldRect = cworldRect;
+	this.cspace = cspace;
+	this.maxPoints = maxPoints;
+    }
+
+    public void setGoal(Point2D.Double goal){
+	this.goal = goal;
+    }
+
+    public void setStart(Point2D.Double start){
+	this.start = start;
+    }
+
+    public void setCworldRect(Rectangle2D.Doule cworldRect){
+	this.cworldRect = cworldRect;
+    }
+
+    public void setCSpace(CSpace cspace){
+	this.cspace = cspace;
+    }
+
+    public void setMaxPoints(int m){
+	this.maxPoints = m;
+    }
+
+    public Map<Point2D.Double, ArrayList<Point2D.Double>> compute(){
         /*
          * ArrayList<Point2D.Double> allPoints = new
          * ArrayList<Point2D.Double>(); allPoints.add(start);
@@ -128,6 +162,7 @@ public class RRTStar {
                     found = true;
             }
         }
+	return graph;
     }
 
     public Point2D.Double getRandomPoint(Rectangle2D.Double cworldRect) {

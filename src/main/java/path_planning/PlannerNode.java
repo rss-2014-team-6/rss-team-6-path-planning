@@ -60,7 +60,7 @@ public class PlannerNode extends AbstractNodeMain {
     private List<Point2D.Double> waypoints;
 
     /* Our current rrt graph */
-    private RRTStar rrtGraph;
+    private RRTStar rrtComputer;
 
     /* keep track of whether we have a map yet */
     boolean initialized;
@@ -80,12 +80,15 @@ public class PlannerNode extends AbstractNodeMain {
 	    CSpace cSpace = new CSpace(map.getObstacles(), ROBOT_RADIUS);
 	    Point2D.Double start = new Point2D.Double(x, y);
 	    Point2D.Double goal = new Point2D.Double(msg.getX(), msg.getY());
+	    rrtComputer.setCSpace(cSpace);
+	    rrtComputer.setStart(start);
+	    rrtComputer.setGoal(goal);
 	    System.out.println("Before computation");
-	    synchronized(this) {
-		System.out.println("In synch");
-		rrtGraph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
-	    }
-	    System.out.println("RRT graph: " + rrtGraph.graph);
+	    //synchronized(this) {
+	    ///System.out.println("In synch");
+		//rrtGraph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
+	    //}
+	    System.out.println("RRT graph: " + rrtComputer.compute());
 	    System.out.println("Map rect: " + map.getWorldRect());
 	    waypoints = rrtGraph.computeShortestPath(start, goal);
 	    
@@ -167,6 +170,8 @@ public class PlannerNode extends AbstractNodeMain {
 
 	initialized = false;
 
+	rrtComputer = new RRTStar(new Point2D.Double(0,0), new Point2D.Double(0,0), null, null, RRT_MAX_POINTS);
+	
 	new DrawThread().start();
     }
 
