@@ -53,7 +53,7 @@ public class RRTStar {
         }
     }
 
-    private Map<Point2D.Double, List<Point2D.Double>> graph = new HashMap<Point2D.Double, List<Point2D.Double>>();
+    public Map<Point2D.Double, ArrayList<Point2D.Double>> graph = new HashMap<Point2D.Double, ArrayList<Point2D.Double>>();
     private Map<Point2D.Double, Point2D.Double> parent = new HashMap<Point2D.Double, Point2D.Double>();
     private Map<Point2D.Double, Double> cost = new HashMap<Point2D.Double, Double>();
 
@@ -80,6 +80,7 @@ public class RRTStar {
         int count = 0;
         boolean found = false;
         while (count < maxPoints && (!found)) {
+	    count++;
             if (rand.nextDouble() < .15)
                 end = goal;
             else
@@ -100,7 +101,9 @@ public class RRTStar {
                         nearest = nearpt;
                     }
                 }
-                graph.put(end, Arrays.asList(nearest));
+		ArrayList<Point2D.Double> newPoint = new ArrayList<Point2D.Double>();
+		newPoint.add(nearest);
+                graph.put(end, newPoint);
                 parent.put(end, nearest);
                 cost.put(end, minCost);
                 graph.get(nearest).add(end);
@@ -117,7 +120,6 @@ public class RRTStar {
                     }
                 }
 
-                count++;
                 if (end == goal)
                     found = true;
             }
@@ -293,7 +295,7 @@ public class RRTStar {
     }
 
     // Make the get so we can render the graph from GlobalNavigation.java
-    public Map<Point2D.Double, List<Point2D.Double>> getGraph() {
+    public Map<Point2D.Double, ArrayList<Point2D.Double>> getGraph() {
         return graph;
     }
 }

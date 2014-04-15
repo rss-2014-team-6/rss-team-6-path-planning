@@ -7,7 +7,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.ros.message.MessageListener;
 import org.ros.namespace.GraphName;
@@ -57,6 +59,9 @@ public class PlannerNode extends AbstractNodeMain {
     /* Our current waypoints */
     private List<Point2D.Double> waypoints;
 
+    /* Our current rrt graph */
+    private RRTStar rrtGraph;
+
     /* keep track of whether we have a map yet */
     boolean initialized;
 
@@ -69,12 +74,19 @@ public class PlannerNode extends AbstractNodeMain {
 
     private void handleGoalMsg(PositionTargetMsg msg) {
         // Update our path plan, and publish to targetPub
+	System.out.println(String.format("Got goal message: %f, %f, %f", msg.getX(), msg.getY(), msg.getTheta()));
 	if(initialized){
+	    System.out.println("Computing RRT path");
 	    CSpace cSpace = new CSpace(map.getObstacles(), ROBOT_RADIUS);
 	    Point2D.Double start = new Point2D.Double(x, y);
 	    Point2D.Double goal = new Point2D.Double(msg.getX(), msg.getY());
-	    RRTStar rrt_graph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
-	    waypoints = rrt_graph.computeShortestPath(start, goal);
+	    System.out.println("Before computation");
+	    synchronized(this) {
+		System.out.println("In synch");
+		rrtGraph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
+	    }
+	    System.out.println("RRT graph: " + rrtGraph.graph);
+	    waypoints = rrtGraph.computeShortestPath(start, goal);
 	    
 	    // TODO: Draw full path to gui
 	    // Maybe also computed tree? (might be slow)
@@ -98,15 +110,18 @@ public class PlannerNode extends AbstractNodeMain {
 
             map = (PolygonMap) stream.readObject();
             stream.close();
+	    System.out.println("Initialized");
             initialized = true;
         }
         catch (IOException e) {
-            e.printStackTrace();
-            return;
+	    throw new RuntimeException ("IOException in handleMapMsg");
+            //e.printStackTrace();
+            //return;
         }
         catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            return;
+	    throw new RuntimeException ("ClassNotFoundException in handleMapMsg");
+            //e.printStackTrace();
+            //return;
         }
     }
         
@@ -153,6 +168,7 @@ public class PlannerNode extends AbstractNodeMain {
 		if (map != null) {
 		    System.out.println("Drawing map");
 		    displayMap();
+		    displayRRTGraph();
 		    displayWaypoints();
 		}
 		else {
@@ -250,10 +266,31 @@ public class PlannerNode extends AbstractNodeMain {
     }
 
     /**
+     * Draw the RRT graph to the MapGUI.
+     */
+    protected void displayRRTGraph() {
+	if (rrtGraph == null) return;
+	Map<Point2D.Double, ArrayList<Point2D.Double>> graph;
+	synchronized(this) {
+	    graph = rrtGraph.graph;
+	}
+	for (Point2D.Double first : graph.keySet()) {
+	    for (Point2D.Double second : graph.get(first)) {
+		GUISegmentMsg segMsg = guiSegmentMsgPub.newMessage();
+		fillSegmentMsg(segMsg, first, second, Color.GREEN);
+		guiSegmentMsgPub.publish(segMsg);
+	    }
+	}	
+    }
+
+    /**
      * Draw a path of the current waypoints to the MapGUI.
      */
     protected void displayWaypoints() {
-        if (waypoints == null || waypoints.size() < 2) return;
+        if (waypoints == null || waypoints.size() < 2) {
+	    System.out.println("No waypoints: " + waypoints);
+	    return;
+	}
 	Object[] pointsArray = waypoints.toArray();
         
         for (int i = 1; i < waypoints.size(); i++) {
