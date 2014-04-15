@@ -80,7 +80,7 @@ public class RRTStar {
 	this.start = start;
     }
 
-    public void setCworldRect(Rectangle2D.Doule cworldRect){
+    public void setCworldRect(Rectangle2D.Double cworldRect){
 	this.cworldRect = cworldRect;
     }
 

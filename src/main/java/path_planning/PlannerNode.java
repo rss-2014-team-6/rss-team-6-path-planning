@@ -83,6 +83,7 @@ public class PlannerNode extends AbstractNodeMain {
 	    rrtComputer.setCSpace(cSpace);
 	    rrtComputer.setStart(start);
 	    rrtComputer.setGoal(goal);
+	    rrtComputer.setCworldRect(map.getWorldRect());
 	    System.out.println("Before computation");
 	    //synchronized(this) {
 	    ///System.out.println("In synch");
@@ -90,7 +91,7 @@ public class PlannerNode extends AbstractNodeMain {
 	    //}
 	    System.out.println("RRT graph: " + rrtComputer.compute());
 	    System.out.println("Map rect: " + map.getWorldRect());
-	    waypoints = rrtGraph.computeShortestPath(start, goal);
+	    waypoints = rrtComputer.computeShortestPath(start, goal);
 	    
 	    // TODO: Draw full path to gui
 	    // Maybe also computed tree? (might be slow)
@@ -283,10 +284,10 @@ public class PlannerNode extends AbstractNodeMain {
      * Draw the RRT graph to the MapGUI.
      */
     protected void displayRRTGraph() {
-	if (rrtGraph == null) return;
+	if (rrtComputer == null) return;
 	Map<Point2D.Double, ArrayList<Point2D.Double>> graph;
 	synchronized(this) {
-	    graph = rrtGraph.graph;
+	    graph = rrtComputer.graph;
 	}
 	for (Point2D.Double first : graph.keySet()) {
 	    for (Point2D.Double second : graph.get(first)) {
