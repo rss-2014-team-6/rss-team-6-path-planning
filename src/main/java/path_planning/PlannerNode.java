@@ -91,6 +91,7 @@ public class PlannerNode extends AbstractNodeMain {
 	    //}
 	    //System.out.println("RRT graph: " + rrtComputer.compute());
 	    //System.out.println("Map rect: " + map.getWorldRect());
+	    rrtComputer.compute();
 	    waypoints = rrtComputer.computeShortestPath(start, goal);
 	    
 	    System.out.println(waypoints);

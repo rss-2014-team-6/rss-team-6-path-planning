@@ -269,7 +269,8 @@ public class RRTStar {
                         && !otherLine.getP2().equals(end)) {
                     return false;
                 }
-            }
+            }andom Next > >|
+
         }
         return true;
     }
@@ -313,22 +314,23 @@ public class RRTStar {
             if (currentPoint.equals(goal)) {
                 return current.path;
             }
-
-            for (Point2D.Double neighbor : graph.get(currentPoint)) {
-                if (visited.contains(neighbor)) {
-                    continue;
-                }
-                if (current.path.contains(neighbor)) {
-                    continue;
-                }
-                ArrayList<Point2D.Double> newPath = (ArrayList<Point2D.Double>) current.path
+	    
+	    if(graph.get(currentPoint) != null){
+		for (Point2D.Double neighbor : graph.get(currentPoint)) {
+		    if (visited.contains(neighbor)) {
+			continue;
+		    }
+		    if (current.path.contains(neighbor)) {
+			continue;
+		    }
+		    ArrayList<Point2D.Double> newPath = (ArrayList<Point2D.Double>) current.path
                         .clone();
-                newPath.add(neighbor);
-                queue.add(new QueueElement(newPath, current.distanceFromStart
-                        + euclideanDistance(currentPoint, neighbor),
-                        euclideanDistance(neighbor, goal)));
-            }
-
+		    newPath.add(neighbor);
+		    queue.add(new QueueElement(newPath, current.distanceFromStart
+					       + euclideanDistance(currentPoint, neighbor),
+					       euclideanDistance(neighbor, goal)));
+		}
+	    }
         }
         return null;
     }
