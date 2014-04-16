@@ -40,6 +40,7 @@ public class PlannerNode extends AbstractNodeMain {
     // TODO: Fill me in
     private static final double ROBOT_RADIUS = 0.3;
     private static final int RRT_MAX_POINTS = 300;
+    private static final double WAYPOINT_TOLERANCE = 0.05;
 
     /* Publishers and subscribers */
     private Publisher<WaypointMsg> targetPub;
@@ -73,7 +74,6 @@ public class PlannerNode extends AbstractNodeMain {
      * the given point.
      */
     private boolean reachedWaypoint(Point2D.Double waypoint) {
-	final double WAYPOINT_TOLERANCE = 0.01;
 	double deltaX = Math.abs(waypoint.x - x);
 	double deltaY = Math.abs(waypoint.y - y);
 	// TODO: Add theta if needed
