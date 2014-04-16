@@ -269,7 +269,7 @@ public class RRTStar {
                         && !otherLine.getP2().equals(end)) {
                     return false;
                 }
-            }andom Next > >|
+            }
 
         }
         return true;
