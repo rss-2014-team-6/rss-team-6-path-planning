@@ -11,6 +11,8 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 
 import org.ros.message.MessageListener;
 import org.ros.namespace.GraphName;
@@ -58,7 +60,7 @@ public class PlannerNode extends AbstractNodeMain {
     private PolygonMap map;
 
     /* Our current waypoints */
-    private List<Point2D.Double> waypoints;
+    private Queue<Point2D.Double> waypoints;
 
     /* Our current rrt graph */
     private RRTStar rrtComputer;
@@ -66,11 +68,48 @@ public class PlannerNode extends AbstractNodeMain {
     /* keep track of whether we have a map yet */
     boolean initialized;
 
+    /**
+     * Check our internal saved pose to determine if we've reached
+     * the given point.
+     */
+    private boolean reachedWaypoint(Point2D.Double waypoint) {
+	final double WAYPOINT_TOLERANCE = 0.01;
+	double deltaX = Math.abs(waypoint.x - x);
+	double deltaY = Math.abs(waypoint.y - y);
+	// TODO: Add theta if needed
+	return Math.sqrt(deltaX*deltaX + deltaY*deltaY) < WAYPOINT_TOLERANCE;
+    }
+
     private void handlePositionMsg(PositionMsg msg) {
         // Save our pose
         x = msg.getX();
         y = msg.getY();
         theta = msg.getTheta();
+
+	if(waypoints == null){
+	    System.out.println("No waypoints :(");
+	    // going forward we're going to need a way to indicate this to state machine
+	    // it is possible that some areas of the map cannot be traversed to because we're too fat or something
+	}
+	else{
+	    System.out.println("Got waypoints!! :)");
+	    Point2D.Double nextWaypoint = waypoints.peek();
+	    while (reachedWaypoint(nextWaypoint)) {
+		if (waypoints.size() > 0) {
+		    waypoints.poll();
+		    nextWaypoint = waypoints.peek();
+		}
+		else {
+		    System.out.println("Out of waypoints!");
+		    return;
+		}
+	    }
+	    WaypointMsg waypointMsg = targetPub.newMessage();
+	    waypointMsg.setX(nextWaypoint.x);
+	    waypointMsg.setY(nextWaypoint.y);
+	    waypointMsg.setTheta(-1); //temporarily
+	    targetPub.publish(waypointMsg);
+	}
     }
 
     private void handleGoalMsg(PositionTargetMsg msg) {
@@ -106,24 +145,10 @@ public class PlannerNode extends AbstractNodeMain {
 		    synchronized(this){
 			System.out.println("RRT graph: " + rrtComputer.compute());
 		    }
-		    waypoints = rrtComputer.computeShortestPath(start, goal);
-		    
-		    System.out.println(waypoints);
-		    // TODO: Draw full path to gui
-		    // Maybe also computed tree? (might be slow)
-		    if(waypoints == null){
-			System.out.println("No waypoints :(");
-			// going forward we're going to need a way to indicate this to state machine
-			// it is possible that some areas of the map cannot be traversed to because we're too fat or something
-		    }
-		    else{
-			System.out.println("Got waypoints!! :)");
-			Point2D.Double nextWaypoint = waypoints.get(0);
-			WaypointMsg waypointMsg = targetPub.newMessage();
-			waypointMsg.setX(nextWaypoint.x);
-			waypointMsg.setY(nextWaypoint.y);
-			waypointMsg.setTheta(-1); //temporarily
-			targetPub.publish(waypointMsg);
+		    List<Point2D.Double> waypointsList = rrtComputer.computeShortestPath(start, goal);
+		    System.out.println(waypointsList);
+		    if (waypointsList != null) {
+			waypoints = new ArrayBlockingQueue(waypointsList.size(), false, waypointsList);
 		    }
 		}else{
                     System.out.println("not a valid goal");
@@ -327,7 +352,7 @@ public class PlannerNode extends AbstractNodeMain {
 	}
 	Object[] pointsArray = waypoints.toArray();
         
-        for (int i = 1; i < waypoints.size(); i++) {
+        for (int i = 1; i < pointsArray.length; i++) {
             Point2D.Double start = (Point2D.Double) pointsArray[i-1];
             Point2D.Double end = (Point2D.Double) pointsArray[i];
             GUISegmentMsg segMsg = guiSegmentMsgPub.newMessage();
