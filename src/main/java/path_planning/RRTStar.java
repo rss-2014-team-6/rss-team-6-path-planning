@@ -103,10 +103,6 @@ public class RRTStar {
         // start = (Point2D.Double) start;
 
         // initialize the RRT graph
-	synchronized(this) {
-	    graph = rrtComputer.graph;
-	}
-
 	graph = new HashMap<Point2D.Double, ArrayList<Point2D.Double>>();
 	parent = new HashMap<Point2D.Double, Point2D.Double>();
 	cost = new HashMap<Point2D.Double, Double>();
