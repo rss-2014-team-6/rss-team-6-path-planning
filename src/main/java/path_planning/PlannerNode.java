@@ -1,6 +1,7 @@
 package path_planning;
 
 import java.awt.Color;
+import java.awt.Point;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.io.ByteArrayInputStream;
@@ -78,41 +79,55 @@ public class PlannerNode extends AbstractNodeMain {
 	if(initialized){
 	    System.out.println("Computing RRT path");
 	    CSpace cSpace = new CSpace(map.getObstacles(), ROBOT_RADIUS);
-	    Point2D.Double start = new Point2D.Double(x, y);
+            boolean validGoal = true;
+            Point2D.Double start = new Point2D.Double(x, y);
 	    Point2D.Double goal = new Point2D.Double(msg.getX(), msg.getY());
-	    rrtComputer.setCSpace(cSpace);
-	    rrtComputer.setStart(start);
-	    rrtComputer.setGoal(goal);
-	    rrtComputer.setCworldRect(map.getWorldRect());
-	    //System.out.println("Before computation");
-	    //synchronized(this) {
-	    ///System.out.println("In synch");
-		//rrtGraph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
-	    //}
-	    //System.out.println("RRT graph: " + rrtComputer.compute());
-	    //System.out.println("Map rect: " + map.getWorldRect());
-	    synchronized(this){
-		System.out.println("RRT graph: " + rrtComputer.compute());
-	    }
-	    waypoints = rrtComputer.computeShortestPath(start, goal);
-	    
-	    System.out.println(waypoints);
-	    // TODO: Draw full path to gui
-	    // Maybe also computed tree? (might be slow)
-	    if(waypoints == null){
-		System.out.println("No waypoints :(");
-		// going forward we're going to need a way to indicate this to state machine
-		// it is possible that some areas of the map cannot be traversed to because we're too fat or something
-	    }
-	    else{
-		System.out.println("Got waypoints!! :)");
-		Point2D.Double nextWaypoint = waypoints.get(0);
-		WaypointMsg waypointMsg = targetPub.newMessage();
-		waypointMsg.setX(nextWaypoint.x);
-		waypointMsg.setY(nextWaypoint.y);
-		waypointMsg.setTheta(-1); //temporarily
-		targetPub.publish(waypointMsg);
-	    }
+            for (PolygonObstacle obs : cSpace.getObstacles()){
+	        if(obs.contains(goal)){
+                    validGoal = false;
+                }
+            }
+
+            if (validGoal){
+
+
+		    
+		    rrtComputer.setCSpace(cSpace);
+		    rrtComputer.setStart(start);
+		    rrtComputer.setGoal(goal);
+		    rrtComputer.setCworldRect(map.getWorldRect());
+		    //System.out.println("Before computation");
+		    //synchronized(this) {
+		    ///System.out.println("In synch");
+			//rrtGraph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
+		    //}
+		    //System.out.println("RRT graph: " + rrtComputer.compute());
+		    //System.out.println("Map rect: " + map.getWorldRect());
+		    synchronized(this){
+			System.out.println("RRT graph: " + rrtComputer.compute());
+		    }
+		    waypoints = rrtComputer.computeShortestPath(start, goal);
+		    
+		    System.out.println(waypoints);
+		    // TODO: Draw full path to gui
+		    // Maybe also computed tree? (might be slow)
+		    if(waypoints == null){
+			System.out.println("No waypoints :(");
+			// going forward we're going to need a way to indicate this to state machine
+			// it is possible that some areas of the map cannot be traversed to because we're too fat or something
+		    }
+		    else{
+			System.out.println("Got waypoints!! :)");
+			Point2D.Double nextWaypoint = waypoints.get(0);
+			WaypointMsg waypointMsg = targetPub.newMessage();
+			waypointMsg.setX(nextWaypoint.x);
+			waypointMsg.setY(nextWaypoint.y);
+			waypointMsg.setTheta(-1); //temporarily
+			targetPub.publish(waypointMsg);
+		    }
+		}else{
+                    System.out.println("not a valid goal");
+                }
 	}
     }
 
