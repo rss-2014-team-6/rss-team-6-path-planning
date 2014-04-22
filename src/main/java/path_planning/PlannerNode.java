@@ -29,7 +29,11 @@ import gui_msgs.GUIRectMsg;
 import gui_msgs.GUIPolyMsg;
 import gui_msgs.GUISegmentMsg;
 import gui_msgs.GUIPointMsg;
+import gui_msgs.GUIGraphMsg;
+import gui_msgs.GUIPathMsg;
 import gui_msgs.ColorMsg;
+import gui_msgs.PointDataMsg;
+import gui_msgs.PointMappingMsg;
 import gui.SonarGUI;
 import map.CSpace;
 import map.PolygonMap;
@@ -48,6 +52,10 @@ public class PlannerNode extends AbstractNodeMain {
     private Publisher<GUIPolyMsg> guiPolyMsgPub;
     private Publisher<GUISegmentMsg> guiSegmentMsgPub;
     private Publisher<GUIPointMsg> guiPointMsgPub;
+    private Publisher<GUIPathMsg> guiPathPub;
+    private Publisher<GUIGraphMsg> guiGraphPub;
+    private Publisher<PointMappingMsg> pointMappingPub;
+    private Publisher<PointDataMsg> pointDataPub;
     private Subscriber<PositionTargetMsg> goalSub;
     private Subscriber<PositionMsg> positionSub;
     private Subscriber<MapMsg> mapSub;
@@ -212,6 +220,11 @@ public class PlannerNode extends AbstractNodeMain {
         guiPolyMsgPub = node.newPublisher("/gui/Poly", "gui_msgs/GUIPolyMsg");
         guiSegmentMsgPub = node.newPublisher("/gui/Segment", "gui_msgs/GUISegmentMsg");
         guiPointMsgPub = node.newPublisher("/gui/Point", "gui_msgs/GUIPointMsg");
+        guiGraphPub = node.newPublisher("/gui/Graph", "gui_msgs/GUIGraphMsg");
+        guiPathPub = node.newPublisher("/gui/Path", "gui_msgs/GUIPathMsg");
+        // Create dummy publishers so we can create new messages (yayyy rosjava)
+        pointMappingPub = node.newPublisher("/dummy/PointMapping", "gui_msgs/PointMappingMsg");
+        pointDataPub = node.newPublisher("/dummy/PointData", "gui_msgs/PointDataMsg");
 
 	initialized = false;
 
@@ -282,6 +295,11 @@ public class PlannerNode extends AbstractNodeMain {
         pointMsg.getColor().setG(color.getGreen());
         pointMsg.getColor().setB(color.getBlue());
     }
+
+    public static void fillPointDataMsg(PointDataMsg pointDataMsg, Point2D.Double point) {
+        pointDataMsg.setX(point.x);
+        pointDataMsg.setY(point.y);
+    }
     
     public static void fillSegmentMsg(GUISegmentMsg segMsg,
             Point2D.Double start, Point2D.Double end, Color color) {
@@ -333,13 +351,21 @@ public class PlannerNode extends AbstractNodeMain {
 	synchronized(this) {
 	    graph = rrtComputer.graph;
 	}
+
+        GUIGraphMsg graphMsg = guiGraphPub.newMessage();
+        List<PointMappingMsg> mappings = graphMsg.getMappings();
 	for (Point2D.Double first : graph.keySet()) {
+            PointMappingMsg mapping = pointMappingPub.newMessage();
+            mappings.add(mapping);
+            fillPointDataMsg(mapping.getSource(), first);
+            List<PointDataMsg> targets = mapping.getTargets();
 	    for (Point2D.Double second : graph.get(first)) {
-		GUISegmentMsg segMsg = guiSegmentMsgPub.newMessage();
-		fillSegmentMsg(segMsg, first, second, Color.GREEN);
-		guiSegmentMsgPub.publish(segMsg);
+                PointDataMsg target = pointDataPub.newMessage();
+                fillPointDataMsg(target, second);
+                targets.add(target);
 	    }
-	}	
+	}
+        guiGraphPub.publish(graphMsg);
     }
 
     /**
@@ -352,13 +378,15 @@ public class PlannerNode extends AbstractNodeMain {
 	}
 	Object[] pointsArray = waypoints.toArray();
         
-        for (int i = 1; i < pointsArray.length; i++) {
-            Point2D.Double start = (Point2D.Double) pointsArray[i-1];
-            Point2D.Double end = (Point2D.Double) pointsArray[i];
-            GUISegmentMsg segMsg = guiSegmentMsgPub.newMessage();
-            fillSegmentMsg(segMsg, start, end, Color.RED);
-            guiSegmentMsgPub.publish(segMsg);
+        GUIPathMsg pathMsg = guiPathPub.newMessage();
+        List<PointDataMsg> points = pathMsg.getPoints();
+        for (int i = 0; i < pointsArray.length; i++) {
+            Point2D.Double curPt = (Point2D.Double) pointsArray[i];
+            PointDataMsg pointData = pointDataPub.newMessage();
+            fillPointDataMsg(pointData, curPt);
+            points.add(pointData);
         }
+        guiPathPub.publish(pathMsg);
     }
 
 
