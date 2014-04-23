@@ -238,13 +238,9 @@ public class PlannerNode extends AbstractNodeMain {
         public void run() {
             while (true) {
 		if (map != null) {
-		    System.out.println("Drawing map");
 		    displayMap();
 		    displayRRTGraph();
 		    displayWaypoints();
-		}
-		else {
-		    System.out.println("Map is still null");
 		}
                 try {
                     Thread.sleep(2000);
@@ -373,7 +369,6 @@ public class PlannerNode extends AbstractNodeMain {
      */
     protected void displayWaypoints() {
         if (waypoints == null || waypoints.size() < 2) {
-	    System.out.println("No waypoints: " + waypoints);
 	    return;
 	}
 	Object[] pointsArray = waypoints.toArray();
