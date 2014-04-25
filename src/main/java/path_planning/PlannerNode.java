@@ -43,7 +43,7 @@ public class PlannerNode extends AbstractNodeMain {
 
     // TODO: Fill me in
     private static final double ROBOT_RADIUS = 0.3;
-    private static final int RRT_MAX_POINTS = 300;
+    private static final int RRT_MAX_POINTS = 500;
     private static final double WAYPOINT_TOLERANCE = 0.05;
 
     /* Publishers and subscribers */
@@ -125,24 +125,21 @@ public class PlannerNode extends AbstractNodeMain {
 	System.out.println(String.format("Got goal message: %f, %f, %f", msg.getX(), msg.getY(), msg.getTheta()));
 	if(initialized){
 	    System.out.println("Computing RRT path");
-	    CSpace cSpace = new CSpace(map.getObstacles(), ROBOT_RADIUS);
             boolean validGoal = true;
             Point2D.Double start = new Point2D.Double(x, y);
 	    Point2D.Double goal = new Point2D.Double(msg.getX(), msg.getY());
-            for (PolygonObstacle obs : cSpace.getObstacles()){
+            for (PolygonObstacle obs : map.getCSpace().getObstacles()){
 	        if(obs.contains(goal)){
                     validGoal = false;
                 }
             }
 
-            if (validGoal){
+            if (validGoal && waypoints == null){ // Only update map until we have a set of waypoints
 
 
-		    
-		    rrtComputer.setCSpace(cSpace);
+                rrtComputer.setMap(map);
 		    rrtComputer.setStart(start);
 		    rrtComputer.setGoal(goal);
-		    rrtComputer.setCworldRect(map.getWorldRect());
 		    //System.out.println("Before computation");
 		    //synchronized(this) {
 		    ///System.out.println("In synch");
@@ -228,7 +225,7 @@ public class PlannerNode extends AbstractNodeMain {
 
 	initialized = false;
 
-	rrtComputer = new RRTStar(new Point2D.Double(0,0), new Point2D.Double(0,0), null, null, RRT_MAX_POINTS);
+	rrtComputer = new RRTStar(new Point2D.Double(0,0), new Point2D.Double(0,0), null, RRT_MAX_POINTS);
 	
 	new DrawThread().start();
     }

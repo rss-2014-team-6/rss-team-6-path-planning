@@ -15,6 +15,7 @@ import java.util.Set;
 
 import map.CSpace;
 import map.PolygonObstacle;
+import map.PolygonMap;
 
 public class RRTStar {
 
@@ -23,8 +24,8 @@ public class RRTStar {
     private Point2D.Double start;
     private Point2D.Double goal;
     private Rectangle2D.Double cworldRect;
-    private CSpace cspace;
     private int maxPoints;
+    private PolygonMap map;
     
 
     // This is the class used for the A* search for the shortest path
@@ -63,12 +64,14 @@ public class RRTStar {
     private Map<Point2D.Double, Point2D.Double> parent = new HashMap<Point2D.Double, Point2D.Double>();
     private Map<Point2D.Double, Double> cost = new HashMap<Point2D.Double, Double>();
 
-    public RRTStar(Point2D.Double start, Point2D.Double goal,
-            Rectangle2D.Double cworldRect, CSpace cspace, int maxPoints) {
+    public RRTStar(Point2D.Double start, Point2D.Double goal, PolygonMap map, int maxPoints) {
 	this.start = start;
 	this.goal = goal;
-	this.cworldRect = cworldRect;
-	this.cspace = cspace;
+        this.map = map;
+        if (map != null) {
+            map.recalculateCSpace();
+            this.cworldRect = map.getWorldRect();
+        }
 	this.maxPoints = maxPoints;
     }
 
@@ -80,12 +83,10 @@ public class RRTStar {
 	this.start = start;
     }
 
-    public void setCworldRect(Rectangle2D.Double cworldRect){
-	this.cworldRect = cworldRect;
-    }
-
-    public void setCSpace(CSpace cspace){
-	this.cspace = cspace;
+    public void setMap(PolygonMap map){
+        this.map = map;
+        map.recalculateCSpace();
+        this.cworldRect = map.getWorldRect();
     }
 
     public void setMaxPoints(int m){
@@ -93,14 +94,6 @@ public class RRTStar {
     }
 
     public Map<Point2D.Double, ArrayList<Point2D.Double>> compute(){
-        /*
-         * ArrayList<Point2D.Double> allPoints = new
-         * ArrayList<Point2D.Double>(); allPoints.add(start);
-         * allPoints.add(goal); for(PolygonObstacle po : cspace.getObstacles()){
-         * for(Point2D.Double point : po.getVertices()){ allPoints.add(point); }
-         * }
-         */
-        // start = (Point2D.Double) start;
 
         // initialize the RRT graph
 	graph = new HashMap<Point2D.Double, ArrayList<Point2D.Double>>();
@@ -119,15 +112,20 @@ public class RRTStar {
         boolean found = false;
         while (count < maxPoints && (!found)) {
 	    count++;
-            if (rand.nextDouble() < .15)
+            if (rand.nextDouble() < .05) {
                 end = goal;
-            else
+            }
+            else {
                 end = getRandomPoint(cworldRect);
+                while (!map.isValid(end.getX(), end.getY())) {
+                    end = getRandomPoint(cworldRect);
+                }
+            }
             beginning = getClosestPoint(end);
             if (end != goal)
                 end = getExtension(beginning, end);
             //System.out.println("End point: " + end);
-	    if (canSee(beginning, end, cspace, cworldRect)) {
+	    if (canSee(beginning, end, map.getCSpace(), cworldRect)) {
 		//System.out.println("We can see the end point!");
                 // TODO: Generate the correct constant for this
                 List<Point2D.Double> nearPoints = getNearPoints(end, 2);
@@ -136,7 +134,7 @@ public class RRTStar {
                 double minCost = cost.get(beginning) + euclideanDistance(beginning, end);
                 Point2D.Double nearest = beginning;
                 for (Point2D.Double nearpt : nearPoints) {
-                    if (canSee(nearpt, end, cspace, cworldRect) &&
+                    if (canSee(nearpt, end, map.getCSpace(), cworldRect) &&
                         cost.get(nearpt) + euclideanDistance(nearpt, end) < minCost) {
                         minCost = cost.get(nearpt) + euclideanDistance(nearpt, end);
                         nearest = nearpt;
@@ -152,7 +150,7 @@ public class RRTStar {
 
                 // Rewire the tree to use min-cost paths that go through the new point
                 for (Point2D.Double nearpt : nearPoints) {
-                    if (canSee(nearpt, end, cspace, cworldRect) &&
+                    if (canSee(nearpt, end, map.getCSpace(), cworldRect) &&
                         cost.get(end) + euclideanDistance(nearpt, end) < cost.get(nearpt)) {
                         // Replace the edge from the parent of nearpt to nearpt
                         graph.get(parent.get(nearpt)).remove(nearpt);
