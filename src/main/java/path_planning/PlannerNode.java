@@ -90,6 +90,10 @@ public class PlannerNode extends AbstractNodeMain {
 
     private void handlePositionMsg(PositionMsg msg) {
         // Save our pose
+
+	double dist = Math.sqrt(Math.pow(x - msg.getX(), 2) + Math.pow(y - msg.getY(), 2) + Math.pow(theta - msg.getTheta(), 2));
+	if(dist > .2)
+	    waypoints = null;
         x = msg.getX();
         y = msg.getY();
         theta = msg.getTheta();
