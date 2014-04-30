@@ -118,6 +118,10 @@ public class PlannerNode extends AbstractNodeMain {
 		    return;
 		}
 	    }
+            if (nextWaypoint == null) {
+                System.out.println("Out of waypoints!");
+                return;
+            }
 	    WaypointMsg waypointMsg = targetPub.newMessage();
 	    waypointMsg.setX(nextWaypoint.x);
 	    waypointMsg.setY(nextWaypoint.y);
