@@ -122,10 +122,11 @@ public class RRTStar {
                 }
             }
             beginning = getClosestPoint(end);
-            if (end != goal)
+            if (end != goal) {
                 end = getExtension(beginning, end);
+            }
             //System.out.println("End point: " + end);
-	    if (canSee(beginning, end, map.getCSpace(), cworldRect)) {
+	    if (canSee(beginning, end, map.getSoftCSpace(), cworldRect)) {
 		//System.out.println("We can see the end point!");
                 // TODO: Generate the correct constant for this
                 List<Point2D.Double> nearPoints = getNearPoints(end, 2);
@@ -134,7 +135,7 @@ public class RRTStar {
                 double minCost = cost.get(beginning) + euclideanDistance(beginning, end);
                 Point2D.Double nearest = beginning;
                 for (Point2D.Double nearpt : nearPoints) {
-                    if (canSee(nearpt, end, map.getCSpace(), cworldRect) &&
+                    if (canSee(nearpt, end, map.getSoftCSpace(), cworldRect) &&
                         cost.get(nearpt) + euclideanDistance(nearpt, end) < minCost) {
                         minCost = cost.get(nearpt) + euclideanDistance(nearpt, end);
                         nearest = nearpt;
@@ -150,7 +151,7 @@ public class RRTStar {
 
                 // Rewire the tree to use min-cost paths that go through the new point
                 for (Point2D.Double nearpt : nearPoints) {
-                    if (canSee(nearpt, end, map.getCSpace(), cworldRect) &&
+                    if (canSee(nearpt, end, map.getSoftCSpace(), cworldRect) &&
                         cost.get(end) + euclideanDistance(nearpt, end) < cost.get(nearpt)) {
                         // Replace the edge from the parent of nearpt to nearpt
                         graph.get(parent.get(nearpt)).remove(nearpt);
