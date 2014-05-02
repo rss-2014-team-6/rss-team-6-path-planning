@@ -31,6 +31,7 @@ import gui_msgs.GUISegmentMsg;
 import gui_msgs.GUIPointMsg;
 import gui_msgs.GUIGraphMsg;
 import gui_msgs.GUIPathMsg;
+import gui_msgs.GUIFiducialMsg;
 import gui_msgs.ColorMsg;
 import gui_msgs.PointDataMsg;
 import gui_msgs.PointMappingMsg;
@@ -53,6 +54,7 @@ public class PlannerNode extends AbstractNodeMain {
     private Publisher<GUIPointMsg> guiPointMsgPub;
     private Publisher<GUIPathMsg> guiPathPub;
     private Publisher<GUIGraphMsg> guiGraphPub;
+    private Publisher<GUIFiducialMsg> guiFidMsgPub;
     private Publisher<PointMappingMsg> pointMappingPub;
     private Publisher<PointDataMsg> pointDataPub;
     private Subscriber<PositionTargetMsg> goalSub;
@@ -229,6 +231,7 @@ public class PlannerNode extends AbstractNodeMain {
         guiPointMsgPub = node.newPublisher("/gui/Point", "gui_msgs/GUIPointMsg");
         guiGraphPub = node.newPublisher("/gui/Graph", "gui_msgs/GUIGraphMsg");
         guiPathPub = node.newPublisher("/gui/Path", "gui_msgs/GUIPathMsg");
+        guiFidMsgPub = node.newPublisher("/gui/Fiducial", "gui_msgs/GUIFiducialMsg");
         // Create dummy publishers so we can create new messages (yayyy rosjava)
         pointMappingPub = node.newPublisher("/dummy/PointMapping", "gui_msgs/PointMappingMsg");
         pointDataPub = node.newPublisher("/dummy/PointData", "gui_msgs/PointDataMsg");
@@ -343,7 +346,52 @@ public class PlannerNode extends AbstractNodeMain {
         GUIPointMsg goal = guiPointMsgPub.newMessage();
         fillPointMsg(goal, robotGoal, Color.GREEN, SonarGUI.X_POINT);
         guiPointMsgPub.publish(goal);
+
+        Map<Point2D.Double, Point2D.Double> fids = map.getFiducials();
+        for (Point2D.Double fidKey : fids.keySet()) {
+            GUIFiducialMsg fidMsg = guiFidMsgPub.newMessage();
+            Point2D.Double fid = fids.get(fidKey);
+            fidMsg.setX(fid.getX());
+            fidMsg.setY(fid.getY());
+            Color topColor = convertColorIndex((int)fidKey.getX());
+            Color bottomColor = convertColorIndex((int)fidKey.getY());
+            fidMsg.getTop().setR(topColor.getRed());
+            fidMsg.getTop().setG(topColor.getGreen());
+            fidMsg.getTop().setB(topColor.getBlue());
+            fidMsg.getBottom().setR(bottomColor.getRed());
+            fidMsg.getBottom().setG(bottomColor.getGreen());
+            fidMsg.getBottom().setB(bottomColor.getBlue());
+            guiFidMsgPub.publish(fidMsg);
+        }
     }
+
+    /**
+     * Convert a vision color index to a awt.Color.
+     */
+    private static Color convertColorIndex(int index) {
+        // From vision:
+        // red = 0, orange = 1, yellow = 2, green = 3, blue = 4, purple = 5
+        if (index == 0) {
+            return Color.RED;
+        }
+        else if (index == 1) {
+            return Color.ORANGE;
+        }
+        else if (index == 2) {
+            return Color.YELLOW;
+        }
+        else if (index == 3) {
+            return Color.GREEN;
+        }
+        else if (index == 4) {
+            return Color.BLUE;
+        }
+        else {
+            return Color.MAGENTA;
+        }
+    }
+
+           
 
     /**
      * Draw the RRT graph to the MapGUI.
