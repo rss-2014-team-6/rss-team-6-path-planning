@@ -117,10 +117,12 @@ public class PlannerNode extends AbstractNodeMain {
 		}
 		else {
 		    System.out.println("Out of waypoints!");
+                    waypoints = null;
 		    return;
 		}
 	    }
             if (nextWaypoint == null) {
+                waypoints = null;
                 System.out.println("Out of waypoints!");
                 return;
             }
