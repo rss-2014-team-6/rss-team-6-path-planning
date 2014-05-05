@@ -45,6 +45,7 @@ public class PlannerNode extends AbstractNodeMain {
     // TODO: Fill me in
     private static final int RRT_MAX_POINTS = 500;
     private static final double WAYPOINT_TOLERANCE = 0.05;
+    private static final double NEW_GOAL_THRESH = 0.05;
 
     /* Publishers and subscribers */
     private Publisher<WaypointMsg> targetPub;
@@ -142,15 +143,13 @@ public class PlannerNode extends AbstractNodeMain {
             boolean validGoal = true;
             Point2D.Double start = new Point2D.Double(x, y);
 	    Point2D.Double goal = new Point2D.Double(msg.getX(), msg.getY());
-            for (PolygonObstacle obs : map.getCSpace().getObstacles()){
-	        if(obs.contains(goal)){
-                    validGoal = false;
-                }
+            validGoal = map.isValidHard(goal.getX(), goal.getY());
+            if (rrtComputer.getGoal() != null &&
+                goal.distance(rrtComputer.getGoal()) > NEW_GOAL_THRESH) {
+                waypoints = null;
             }
 
             if (validGoal && waypoints == null){ // Only update map until we have a set of waypoints
-		
-		
                 rrtComputer.setMap(map);
 		rrtComputer.setStart(start);
 		rrtComputer.setGoal(goal);

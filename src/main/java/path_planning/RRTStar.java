@@ -79,6 +79,10 @@ public class RRTStar {
 	this.goal = goal;
     }
 
+    public Point2D.Double getGoal() {
+        return this.goal;
+    }
+
     public void setStart(Point2D.Double start){
 	this.start = start;
     }
@@ -117,7 +121,7 @@ public class RRTStar {
             }
             else {
                 end = getRandomPoint(cworldRect);
-                while (!map.isValid(end.getX(), end.getY())) {
+                while (!map.isValidHard(end.getX(), end.getY())) {
                     end = getRandomPoint(cworldRect);
                 }
             }
