@@ -149,32 +149,33 @@ public class PlannerNode extends AbstractNodeMain {
             }
 
             if (validGoal && waypoints == null){ // Only update map until we have a set of waypoints
-
-
+		
+		
                 rrtComputer.setMap(map);
-		    rrtComputer.setStart(start);
-		    rrtComputer.setGoal(goal);
-		    //System.out.println("Before computation");
-		    //synchronized(this) {
-		    ///System.out.println("In synch");
-			//rrtGraph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
-		    //}
-		    //System.out.println("RRT graph: " + rrtComputer.compute());
-		    //System.out.println("Map rect: " + map.getWorldRect());
-		    synchronized(this){
-			System.out.println("RRT graph: " + rrtComputer.compute());
-		    }
-		    List<Point2D.Double> waypointsList = rrtComputer.computeShortestPath(start, goal);
-		    System.out.println(waypointsList);
-		    if (waypointsList != null) {
-			waypoints = new ArrayBlockingQueue(waypointsList.size(), false, waypointsList);
-		    }
-		}else{
-                    System.out.println("not a valid goal");
-                }
+		rrtComputer.setStart(start);
+		rrtComputer.setGoal(goal);
+		//System.out.println("Before computation");
+		//synchronized(this) {
+		///System.out.println("In synch");
+		//rrtGraph = new RRTStar(start, goal, map.getWorldRect(), cSpace, RRT_MAX_POINTS);
+		//}
+		//System.out.println("RRT graph: " + rrtComputer.compute());
+		//System.out.println("Map rect: " + map.getWorldRect());
+		synchronized(this){
+		    System.out.println("RRT graph: " + rrtComputer.compute());
+		}
+		List<Point2D.Double> waypointsList = rrtComputer.computeShortestPath(start, goal);
+		System.out.println(waypointsList);
+		if (waypointsList != null) {
+		    waypoints = new ArrayBlockingQueue(waypointsList.size(), false, waypointsList);
+		}
+            }else{
+                System.out.println("not a valid goal");
+		System.out.println("Goal: " + goal + " Start: " + start);
+            }
 	}
     }
-
+    
     private void handleMapMsg(MapMsg msg) {
         try {
             byte[] ba = msg.getSerializedMap().array();
