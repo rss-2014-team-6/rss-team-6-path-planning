@@ -130,7 +130,8 @@ public class RRTStar {
                 end = getExtension(beginning, end);
             }
             //System.out.println("End point: " + end);
-	    if (canSee(beginning, end, map.getSoftCSpace(), cworldRect)) {
+	    if (beginning.equals(start) || // Special case for start, in case we're inside an obstacle
+                canSee(beginning, end, map.getSoftCSpace(), cworldRect)) {
 		//System.out.println("We can see the end point!");
                 // TODO: Generate the correct constant for this
                 List<Point2D.Double> nearPoints = getNearPoints(end, 2);
