@@ -130,7 +130,9 @@ public class RRTStar {
                 end = getExtension(beginning, end);
             }
             //System.out.println("End point: " + end);
-	    if (beginning.equals(start) || // Special case for start, in case we're inside an obstacle
+	    if ((beginning.equals(start) &&
+		 !map.isValidSoft(start.getX(), start.getY()) &&
+		 canSee(getMidpoint(start, end), end, map.getSoftCSpace(), cworldRect)) || // Special case for start, in case we're inside an obstacle
                 canSee(beginning, end, map.getSoftCSpace(), cworldRect)) {
 		//System.out.println("We can see the end point!");
                 // TODO: Generate the correct constant for this
@@ -218,6 +220,12 @@ public class RRTStar {
         double y = Math.sin(theta) * EXTENSION_LENGTH + start.getY();
 
         return new Point2D.Double(x, y);
+    }
+
+    private Point2D.Double getMidpoint(Point2D.Double start, Point2D.Double end) {
+        double midx = (start.getX() + end.getX()) / 2.0;
+        double midy = (start.getY() + end.getY()) / 2.0;
+	return new Point2D.Double(midx, midy);
     }
 
     // Make 4 checks around the midpoint of a line.
